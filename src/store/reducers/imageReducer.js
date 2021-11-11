@@ -14,11 +14,20 @@ export default function imageReducer(state = initialState, action) {
     case actionTypes.IMAGE_RECEIVED:
       return {
         ...state,
-        selectedImg: action.payload[0],
+        selectedImg: action.payload[action.payload.length - 1],
         images: action.payload.reduce((imagesDict, imgSrc) => {
           imagesDict[imgSrc] = initialImageState;
           return imagesDict;
         }, {}),
+      };
+    case actionTypes.IMAGE_CHANGED:
+      return {
+        ...state,
+        selectedImg: action.payload,
+        // images: action.payload.reduce((imagesDict, imgSrc) => {
+        //   imagesDict[imgSrc] = initialImageState;
+        //   return imagesDict;
+        // }, {}),
       };
 
     case actionTypes.IMAGE_BOX_CREATED:
@@ -40,6 +49,24 @@ export default function imageReducer(state = initialState, action) {
         },
       };
 
+    case actionTypes.IMAGE_BOX_TICKET_UPDATED:
+      const newBoxes1 = [
+        ...state.images[state.selectedImg].boxes.slice(
+          0,
+          state.images[state.selectedImg].timelineIdx
+        ),
+        action.payload,
+      ];
+      return {
+        ...state,
+        images: {
+          ...state.images,
+          [state.selectedImg]: {
+            boxes: newBoxes1,
+            timelineIdx: newBoxes1.length,
+          },
+        },
+      };
     default:
       return state;
     // throw new Error(`Unknown action type "${action.type}"`);

@@ -1,9 +1,4 @@
-import {
-  BOX_CREATION_ENDED,
-  BOX_CREATION_STARTED,
-  BOX_CREATION_UPDATED,
-  IMAGE_RESIZED,
-} from "../actions/boxEditorAction";
+import * as actionTypes from "../actions/boxEditorAction";
 
 export const initialState = {
   scaleRatio: 1,
@@ -16,12 +11,15 @@ export const initialState = {
   x1: 0,
   y1: 0,
   id: null,
+  ticket: "",
+  isThereTicket: false,
   isEditing: false,
+  data: null,
 };
 
 export default function boxEditorReducer(state = initialState, action) {
   switch (action.type) {
-    case IMAGE_RESIZED:
+    case actionTypes.IMAGE_RESIZED:
       return {
         ...state,
         scaleRatio: action.payload.scaleRatio,
@@ -31,7 +29,7 @@ export default function boxEditorReducer(state = initialState, action) {
         offsetY1: action.payload.offsetY1,
       };
 
-    case BOX_CREATION_STARTED:
+    case actionTypes.BOX_CREATION_STARTED:
       return {
         ...state,
         isEditing: true,
@@ -42,7 +40,7 @@ export default function boxEditorReducer(state = initialState, action) {
         y1: action.payload.y - state.offsetY0,
       };
 
-    case BOX_CREATION_UPDATED: {
+    case actionTypes.BOX_CREATION_UPDATED: {
       return {
         ...state,
         x1:
@@ -54,7 +52,25 @@ export default function boxEditorReducer(state = initialState, action) {
       };
     }
 
-    case BOX_CREATION_ENDED: {
+    case actionTypes.BOX_CREATION_ENDED: {
+      return {
+        ...state,
+        isEditing: initialState.isEditing,
+        isThereTicket: true,
+      };
+    }
+    case actionTypes.BOX_CREAT_TICKET: {
+      return {
+        ...state,
+        scaleRatio: state.scaleRatio,
+        offsetX0: state.offsetX0,
+        offsetY0: state.offsetY0,
+        offsetX1: state.offsetX1,
+        offsetY1: state.offsetY1,
+        ticket: action.payload,
+      };
+    }
+    case actionTypes.BOX_CREAT_TICKET_SAVED: {
       return {
         ...initialState,
         scaleRatio: state.scaleRatio,
@@ -62,6 +78,7 @@ export default function boxEditorReducer(state = initialState, action) {
         offsetY0: state.offsetY0,
         offsetX1: state.offsetX1,
         offsetY1: state.offsetY1,
+        ticket: state.ticket,
       };
     }
 

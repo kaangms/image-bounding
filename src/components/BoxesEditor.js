@@ -1,11 +1,16 @@
 import React, { useCallback, useEffect, useRef } from "react";
 import { useSelector } from "react-redux";
 import { useDispatch } from "react-redux";
+import { Form, Input, ListGroup, ListGroupItem } from "reactstrap";
+
 import {
   boxCreationEnded,
   boxCreationStarted,
   boxCreationUpdated,
+  boxCreatTicket,
+  boxCreatTicketSaved,
   imageResized,
+  writeTextData,
 } from "../store/actions/boxEditorAction";
 
 import styles from "./BoxesEditor.module.css";
@@ -40,25 +45,26 @@ export default function BoxesEditor({ timelineIdx, onNewBox, imgSrc, boxes }) {
     );
   }, [dispatch]);
 
-  // When browser viewport is resized we need to recalculate max image size
-  // and adjust offsets to redraw all boxes.
   useEffect(() => {
+    // console.log("object");
     window.addEventListener("resize", handleImageResize);
     return () => window.removeEventListener("resize", handleImageResize);
   }, [handleImageResize]);
 
   const handleMouseDown = useCallback(
     (ev) => {
-      dispatch(
-        boxCreationStarted({
-          x: ev.clientX,
-          y: ev.clientY,
-          // Use box creation timestamp as id
-          id: Date.now().toString(),
-        })
-      );
+      if (!state.isThereTicket) {
+        dispatch(
+          boxCreationStarted({
+            x: ev.clientX,
+            y: ev.clientY,
+
+            id: Date.now().toString(),
+          })
+        );
+      }
     },
-    [dispatch]
+    [dispatch, state.isThereTicket]
   );
 
   const handleMouseMove = useCallback(
@@ -66,14 +72,15 @@ export default function BoxesEditor({ timelineIdx, onNewBox, imgSrc, boxes }) {
       const x = ev.clientX;
       const y = ev.clientY;
       if (!state.isEditing) return;
-      dispatch(boxCreationUpdated({ x, y }));
+      if (!state.isThereTicket) {
+        dispatch(boxCreationUpdated({ x, y }));
+      }
     },
-    [dispatch, state.isEditing]
+    [dispatch, state.isEditing, state.isThereTicket]
   );
-
-  const handleMouseUp = useCallback(
-    (ev) => {
-      if (!state.isEditing) return;
+  const handleMouseUp = (ev) => {
+    if (!state.isEditing) return;
+    if (!state.isThereTicket) {
       dispatch(boxCreationEnded());
       onNewBox({
         id: state.id,
@@ -81,19 +88,32 @@ export default function BoxesEditor({ timelineIdx, onNewBox, imgSrc, boxes }) {
         y0: Math.round(Math.min(state.y0, state.y1) / state.scaleRatio),
         x1: Math.round(Math.max(state.x0, state.x1) / state.scaleRatio),
         y1: Math.round(Math.max(state.y0, state.y1) / state.scaleRatio),
+        ticket: "",
       });
+    }
+  };
+
+  const inputTextHandler = useCallback(
+    (ticket) => (e) => {
+      dispatch(boxCreatTicket({ ticket }));
+
+      onNewBox({
+        id: state.id,
+        x0: Math.round(Math.min(state.x0, state.x1) / state.scaleRatio),
+        y0: Math.round(Math.min(state.y0, state.y1) / state.scaleRatio),
+        x1: Math.round(Math.max(state.x0, state.x1) / state.scaleRatio),
+        y1: Math.round(Math.max(state.y0, state.y1) / state.scaleRatio),
+        ticket: state.ticket,
+      });
+      let data = dataBuild(state);
+      // console.log(data);
+      dispatch(boxCreatTicketSaved());
+
+      e.preventDefault();
+      // }
     },
-    [
-      onNewBox,
-      state.id,
-      state.isEditing,
-      state.scaleRatio,
-      state.x0,
-      state.y0,
-      state.x1,
-      state.y1,
-      dispatch,
-    ]
+
+    [dispatch, onNewBox, state]
   );
 
   return (
@@ -104,6 +124,8 @@ export default function BoxesEditor({ timelineIdx, onNewBox, imgSrc, boxes }) {
       className="boxes-editor"
     >
       <span
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
         onMouseDown={handleMouseDown}
         className={styles.wrapper}
         ref={wrapperRef}
@@ -116,18 +138,72 @@ export default function BoxesEditor({ timelineIdx, onNewBox, imgSrc, boxes }) {
           alt=""
         />
 
-        {boxes.map(({ x0, y0, x1, y1, id }, i) =>
+        {boxes.map(({ x0, y0, x1, y1, id, ticket }, i) =>
           i >= timelineIdx ? null : (
-            <div
-              className={styles.box}
-              style={{
-                height: (y1 - y0) * state.scaleRatio,
-                width: (x1 - x0) * state.scaleRatio,
-                left: x0 * state.scaleRatio,
-                top: y0 * state.scaleRatio,
-              }}
-              key={`box-${id}`}
-            />
+            <div>
+              <h6
+                style={{
+                  left: x0 * state.scaleRatio,
+                  top: y0 * state.scaleRatio - 18,
+                  color: "red",
+                }}
+              >
+                X:{cordinatEdit(x0 * state.scaleRatio)} ve y:
+                {cordinatEdit(y0 * state.scaleRatio)} {ticket.ticket}
+              </h6>
+              {!state.isEditing && (
+                <div
+                  style={{
+                    position: "absolute",
+                    left: x0 * state.scaleRatio + (x1 - x0) * state.scaleRatio,
+                    top: y0 * state.scaleRatio,
+                    width: 200,
+                  }}
+                >
+                  <ListGroup>
+                    <ListGroupItem
+                      action
+                      active
+                      onClick={inputTextHandler("Cras justo odio")}
+                      tag="button"
+                    >
+                      Cras justo odio
+                    </ListGroupItem>
+                    <ListGroupItem
+                      action
+                      onClick={inputTextHandler(" Dapibus ac facilisis in")}
+                      tag="button"
+                    >
+                      Dapibus ac facilisis in
+                    </ListGroupItem>
+                  </ListGroup>
+                </div>
+                // <Form>
+                //   <Input
+                //     placeholder="Lütfen tanımlayınız..."
+                //     value={ticket.ticket}
+                //     onKeyPress={inputTextHandler}
+                //     style={{
+                //       position: "absolute",
+                //       left:
+                //         x0 * state.scaleRatio + (x1 - x0) * state.scaleRatio,
+                //       top: y0 * state.scaleRatio,
+                //       width: 200,
+                //     }}
+                //   />{" "}
+                // </Form>
+              )}
+              <div
+                className={styles.box}
+                style={{
+                  height: (y1 - y0) * state.scaleRatio,
+                  width: (x1 - x0) * state.scaleRatio,
+                  left: x0 * state.scaleRatio,
+                  top: y0 * state.scaleRatio,
+                }}
+                key={`box-${id}`}
+              ></div>
+            </div>
           )
         )}
 
@@ -145,4 +221,20 @@ export default function BoxesEditor({ timelineIdx, onNewBox, imgSrc, boxes }) {
       </span>
     </div>
   );
+}
+function dataBuild(state) {
+  return `${state.ticket.ticket} ${Math.round(
+    Math.min(state.x0, state.x1)
+  )} ${Math.round(Math.min(state.y0, state.y1))} ${
+    Math.round(Math.max(state.x0, state.x1)) -
+    Math.round(Math.min(state.x0, state.x1))
+  } ${
+    Math.round(Math.max(state.y0, state.y1)) -
+    Math.round(Math.min(state.y0, state.y1))
+  }`;
+}
+
+function cordinatEdit(cordinat) {
+  var text = cordinat.toString();
+  return text.substring(0, text.lastIndexOf("."));
 }
