@@ -31,6 +31,8 @@ export default function imageReducer(state = initialState, action) {
       };
 
     case actionTypes.IMAGE_BOX_CREATED:
+      // console.log(action.payload);
+
       const newBoxes = [
         ...state.images[state.selectedImg].boxes.slice(
           0,
@@ -38,6 +40,7 @@ export default function imageReducer(state = initialState, action) {
         ),
         action.payload,
       ];
+      // state.images.selectedImg.boxes.filter((b) => b.ticket);
       return {
         ...state,
         images: {

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Alert, Container } from "reactstrap";
+import { Container } from "reactstrap";
 import ImageForm from "./ImageForm";
 import {
   imageBoxCreated,
@@ -39,10 +39,9 @@ function Dashboard() {
       <Container>
         <div style={{ width: "600px", marginBottom: "5px", marginTop: "20px" }}>
           <ImageForm handleChange={handleChange} />
-          {/* //TODO:Alert gizlenecek */}
-          <Alert color="warning">
-            Etiketleme işlemi için lütfen enter tuşuna basınız..
-          </Alert>
+          {/* <Alert color="warning">
+            Etiketleme işlemi için lütfen etiketi seçiniz..
+          </Alert> */}
         </div>
 
         {imgUrl === undefined ? (

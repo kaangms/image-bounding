@@ -1,7 +1,8 @@
-import React, { useCallback, useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import { useDispatch } from "react-redux";
-import { Form, Input, ListGroup, ListGroupItem } from "reactstrap";
+import { ListGroup, ListGroupItem } from "reactstrap";
+import TicketService from "../services/ticketService";
 
 import {
   boxCreationEnded,
@@ -10,17 +11,25 @@ import {
   boxCreatTicket,
   boxCreatTicketSaved,
   imageResized,
-  writeTextData,
 } from "../store/actions/boxEditorAction";
 
 import styles from "./BoxesEditor.module.css";
 
-export default function BoxesEditor({ timelineIdx, onNewBox, imgSrc, boxes }) {
+export default function BoxesEditor({ onNewBox, imgSrc, boxes }) {
   const dispatch = useDispatch();
   const state = useSelector((state) => state.boxEditorReducer);
   const editorRef = useRef(null);
   const imgRef = useRef(null);
   const wrapperRef = useRef(null);
+  const [tickets, setTickets] = useState([]);
+  useEffect(() => {
+    let ticektService = new TicketService();
+    ticektService
+      .getTickets()
+      // .then((response) => console.log(response))
+      .then((response) => setTickets(response.data))
+      .catch((error) => console.error(error));
+  }, []);
 
   const handleImageResize = useCallback(() => {
     const editorDimensions = editorRef.current.getBoundingClientRect();
@@ -82,40 +91,57 @@ export default function BoxesEditor({ timelineIdx, onNewBox, imgSrc, boxes }) {
     if (!state.isEditing) return;
     if (!state.isThereTicket) {
       dispatch(boxCreationEnded());
-      onNewBox({
-        id: state.id,
-        x0: Math.round(Math.min(state.x0, state.x1) / state.scaleRatio),
-        y0: Math.round(Math.min(state.y0, state.y1) / state.scaleRatio),
-        x1: Math.round(Math.max(state.x0, state.x1) / state.scaleRatio),
-        y1: Math.round(Math.max(state.y0, state.y1) / state.scaleRatio),
-        ticket: "",
-      });
     }
   };
 
   const inputTextHandler = useCallback(
     (ticket) => (e) => {
+      // console.log(ticket);
       dispatch(boxCreatTicket({ ticket }));
-
+      const id = state.id;
+      const x0 = Math.round(Math.min(state.x0, state.x1) / state.scaleRatio);
+      const y0 = Math.round(Math.min(state.y0, state.y1) / state.scaleRatio);
+      const x1 = Math.round(Math.max(state.x0, state.x1) / state.scaleRatio);
+      const y1 = Math.round(Math.max(state.y0, state.y1) / state.scaleRatio);
+      const boxWith = x1 - x0;
+      const boxHeight = y1 - y0;
       onNewBox({
-        id: state.id,
-        x0: Math.round(Math.min(state.x0, state.x1) / state.scaleRatio),
-        y0: Math.round(Math.min(state.y0, state.y1) / state.scaleRatio),
-        x1: Math.round(Math.max(state.x0, state.x1) / state.scaleRatio),
-        y1: Math.round(Math.max(state.y0, state.y1) / state.scaleRatio),
-        ticket: state.ticket,
+        id: id,
+        x0: x0,
+        y0: y0,
+        x1: x1,
+        y1: y1,
+        ticket: ticket,
       });
-      let data = dataBuild(state);
-      // console.log(data);
+      var ticketService = new TicketService();
+      ticketService.addBoxTickets({
+        boxStateId: id.toString(),
+        imgUrl: imgSrc.toString(),
+        ticketName: ticket.toString(),
+        cordinateX: x0.toString(),
+        cordinateY: y0.toString(),
+        boxWith: boxWith.toString(),
+        boxHeight: boxHeight.toString(),
+      });
+
       dispatch(boxCreatTicketSaved());
 
       e.preventDefault();
       // }
     },
 
-    [dispatch, onNewBox, state]
+    [
+      dispatch,
+      imgSrc,
+      onNewBox,
+      state.id,
+      state.scaleRatio,
+      state.x0,
+      state.x1,
+      state.y0,
+      state.y1,
+    ]
   );
-
   return (
     <div
       onMouseMove={handleMouseMove}
@@ -138,74 +164,31 @@ export default function BoxesEditor({ timelineIdx, onNewBox, imgSrc, boxes }) {
           alt=""
         />
 
-        {boxes.map(({ x0, y0, x1, y1, id, ticket }, i) =>
-          i >= timelineIdx ? null : (
-            <div>
-              <h6
-                style={{
-                  left: x0 * state.scaleRatio,
-                  top: y0 * state.scaleRatio - 18,
-                  color: "red",
-                }}
-              >
-                X:{cordinatEdit(x0 * state.scaleRatio)} ve y:
-                {cordinatEdit(y0 * state.scaleRatio)} {ticket.ticket}
-              </h6>
-              {!state.isEditing && (
-                <div
-                  style={{
-                    position: "absolute",
-                    left: x0 * state.scaleRatio + (x1 - x0) * state.scaleRatio,
-                    top: y0 * state.scaleRatio,
-                    width: 200,
-                  }}
-                >
-                  <ListGroup>
-                    <ListGroupItem
-                      action
-                      active
-                      onClick={inputTextHandler("Cras justo odio")}
-                      tag="button"
-                    >
-                      Cras justo odio
-                    </ListGroupItem>
-                    <ListGroupItem
-                      action
-                      onClick={inputTextHandler(" Dapibus ac facilisis in")}
-                      tag="button"
-                    >
-                      Dapibus ac facilisis in
-                    </ListGroupItem>
-                  </ListGroup>
-                </div>
-                // <Form>
-                //   <Input
-                //     placeholder="Lütfen tanımlayınız..."
-                //     value={ticket.ticket}
-                //     onKeyPress={inputTextHandler}
-                //     style={{
-                //       position: "absolute",
-                //       left:
-                //         x0 * state.scaleRatio + (x1 - x0) * state.scaleRatio,
-                //       top: y0 * state.scaleRatio,
-                //       width: 200,
-                //     }}
-                //   />{" "}
-                // </Form>
-              )}
-              <div
-                className={styles.box}
-                style={{
-                  height: (y1 - y0) * state.scaleRatio,
-                  width: (x1 - x0) * state.scaleRatio,
-                  left: x0 * state.scaleRatio,
-                  top: y0 * state.scaleRatio,
-                }}
-                key={`box-${id}`}
-              ></div>
-            </div>
-          )
-        )}
+        {boxes.map(({ x0, y0, x1, y1, id, ticket }) => (
+          <div key={id}>
+            <h6
+              style={{
+                fontSize: "8px",
+                left: x0 * state.scaleRatio,
+                top: y0 * state.scaleRatio - 14,
+                color: "red",
+              }}
+            >
+              X:{x0} - Y:{y0} - {ticket}
+            </h6>
+
+            <div
+              className={styles.box}
+              style={{
+                height: (y1 - y0) * state.scaleRatio,
+                width: (x1 - x0) * state.scaleRatio,
+                left: x0 * state.scaleRatio,
+                top: y0 * state.scaleRatio,
+              }}
+              key={`box-${id}`}
+            ></div>
+          </div>
+        ))}
 
         {state.isEditing && (
           <div
@@ -216,25 +199,41 @@ export default function BoxesEditor({ timelineIdx, onNewBox, imgSrc, boxes }) {
               left: Math.min(state.x0, state.x1),
               top: Math.min(state.y0, state.y1),
             }}
-          />
+          >
+            {state.isThereTicket && (
+              <div
+                style={{
+                  position: "absolute",
+                }}
+              >
+                {choseTicket(inputTextHandler, tickets)}
+              </div>
+            )}
+          </div>
         )}
       </span>
     </div>
   );
 }
-function dataBuild(state) {
-  return `${state.ticket.ticket} ${Math.round(
-    Math.min(state.x0, state.x1)
-  )} ${Math.round(Math.min(state.y0, state.y1))} ${
-    Math.round(Math.max(state.x0, state.x1)) -
-    Math.round(Math.min(state.x0, state.x1))
-  } ${
-    Math.round(Math.max(state.y0, state.y1)) -
-    Math.round(Math.min(state.y0, state.y1))
-  }`;
-}
+function choseTicket(inputTextHandler, tickets) {
+  return (
+    <ListGroup>
+      {tickets.map((ticket) => (
+        <ListGroupItem
+          key={ticket.id}
+          action
+          onClick={inputTextHandler(ticket.ticketName)}
+          tag="button"
+        >
+          {ticket.ticketName}
+        </ListGroupItem>
+      ))}
 
-function cordinatEdit(cordinat) {
-  var text = cordinat.toString();
-  return text.substring(0, text.lastIndexOf("."));
+      {tickets.length === 0 && (
+        <ListGroupItem color="danger" action tag="button">
+          Servis Kontrol
+        </ListGroupItem>
+      )}
+    </ListGroup>
+  );
 }

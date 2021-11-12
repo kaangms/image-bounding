@@ -53,9 +53,9 @@ export default function boxEditorReducer(state = initialState, action) {
     }
 
     case actionTypes.BOX_CREATION_ENDED: {
+      // console.log(state);
       return {
         ...state,
-        isEditing: initialState.isEditing,
         isThereTicket: true,
       };
     }
